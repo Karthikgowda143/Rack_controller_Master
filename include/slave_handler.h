@@ -28,5 +28,5 @@ void sendLightOn();
 void sendLightOff();
 void send_virgin_message();
 void send_device_settings();
-
+void send_restart_message();
 #endif

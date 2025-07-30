@@ -7,6 +7,7 @@
 #include "clock.h"
 #include "math.h"
 
+bool extern system_status_flag;
 bool extern virginmodeflag;
 bool extern startStopButtonPressed;
 

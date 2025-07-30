@@ -6,8 +6,8 @@
 #define DHTTYPE DHT11   // Sensor type: DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-
-bool virginmodeflag = false;
+bool system_status_flag = false;
+bool virginmodeflag = true;
 bool startStopButtonPressed = false;
 float temperature = 0.0;
 float humidity = 0.0;
@@ -51,7 +51,10 @@ void SensorManagementTask(void *pvParameters) {
 
     if(virginmodeflag == false && startStopButtonPressed == true) {
         normalFanOn();
-    } 
+    } else {
+        normalFanOff();
+    }
+
 
   while (1) {
     

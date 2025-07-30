@@ -111,6 +111,7 @@ void recv_message(uint8_t *data, uint32_t size)
     else if (type == "rack_id_set") {
         int rackIDReceived = doc["rack_id"];
         saveRackID(rackIDReceived);
+        loadAllSettings();
     }
     else if (type == "device_settings_set") {
 
@@ -156,6 +157,15 @@ void recv_message(uint8_t *data, uint32_t size)
     {
         send_device_settings();
     }
+}
+
+void send_restart_message() {
+    StaticJsonDocument<253> doc;
+    doc["type"] = "slave_restart";
+
+    char jsonBuffer[256];
+    serializeJson(doc, jsonBuffer, sizeof(jsonBuffer)); 
+    slip_send_message( &slip, (uint8_t *)jsonBuffer, strlen(jsonBuffer)); 
 }
 
 void send_button_status(bool status) {

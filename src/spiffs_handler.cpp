@@ -1,6 +1,7 @@
 
 #include "spiffs_handler.h"
 
+#define SYSTEM_STATUS  "/system_status.json"
 #define CONFIG_FILE    "/config.json"
 #define RACK_FILE      "/rackid.json"
 #define PASSWORD_FILE  "/password.json"
@@ -24,6 +25,20 @@ void saveConfigSettings(int tempThreshold, int smokeThreshold, int voltageRange,
   serializeJsonPretty(doc, file);
   file.close();
   Serial.println("Saved config settings");
+}
+
+void saveSystemStatus(bool status) {
+  DynamicJsonDocument doc(64);
+  doc["system_status"] = status;
+
+  File file = SPIFFS.open(SYSTEM_STATUS, FILE_WRITE);
+  if (!file) {
+    Serial.println("Failed to open button status file");
+    return;
+  }
+  serializeJson(doc, file);
+  file.close();
+
 }
 
 void saveRackID(int value) {
@@ -150,6 +165,16 @@ void loadAllSettings() {
     file.close();
   }
 
+  file = SPIFFS.open(SYSTEM_STATUS, FILE_READ);
+  if (file) {
+    DynamicJsonDocument doc(64);
+    if (deserializeJson(doc, file) == DeserializationError::Ok) {
+      system_status_flag = doc["system_status"].as<bool>();
+    }
+    file.close();
+  }
+
+
   // Debug
   Serial.println("Loaded all settings:");
   Serial.printf("tempThreshold   : %d\n", tempThreshold);
@@ -160,23 +185,22 @@ void loadAllSettings() {
   Serial.printf("rackID          : %d\n", rackID);
   Serial.printf("password        : %d\n", password);
   Serial.printf("Slave virgin    : %d\n", slave_virgin);
-  Serial.printf("startStopButtonPressed : %d\n", startStopButtonPressed);
+  Serial.printf("startStopButton : %d\n", startStopButtonPressed);
 
 
-  if(tempThreshold == 0 || smokeThreshold == 0 || slave_virgin == true){
-    Serial.println("Settings are not set. Please set them in the web interface.");
-    virginmodeflag = true;
+  if(system_status_flag == false) {
+    if(rackID != 0 && tempThreshold != 0 && smokeThreshold != 0 && slave_virgin == false){
+      Serial.println("All setup complete");
+      saveSystemStatus(true);
+      send_restart_message();
+      delay(100);
+      esp_restart();
+    }
   }
-  else{
-    virginmodeflag = false;
-    //normalFanOn();
-  }
+  
+  if(system_status_flag == true) virginmodeflag = false;
+  else virginmodeflag = true;
 
-  if(startStopButtonPressed == true){
-    normalFanOn();
-  }else{
-    normalFanOff();
-  }
 }
 
 
