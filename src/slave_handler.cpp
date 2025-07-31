@@ -21,8 +21,10 @@ slip_init_handler();
     if (currentMillis - previousMillis2 >= 5000) {  // Check every 5 seconds
         previousMillis2 = currentMillis;
 
-        if(virginmodeflag == false)
-        sendInternalDisplayData();
+        if(virginmodeflag == false) {
+            sendInternalDisplayData();
+            checkDoorOpen();
+        }
         else
         send_virgin_message();
     }
@@ -157,6 +159,68 @@ void recv_message(uint8_t *data, uint32_t size)
     {
         send_device_settings();
     }
+}
+
+#define DOOR_COUNT 4
+#define ALERT_TIMEOUT 300000      // 5 minutes
+#define ALARM_INTERVAL 5000       // Alarm repeat every 5 sec
+
+unsigned long door_open_time[DOOR_COUNT] = {0};
+unsigned long last_alarm_time[DOOR_COUNT] = {0};
+bool is_door_open[DOOR_COUNT] = {false};
+bool alert_sent[DOOR_COUNT] = {false};
+
+void checkDoorOpen() {
+    const char* doorNames[DOOR_COUNT] = { "front", "back", "side1", "side2" };
+    unsigned long now = millis();
+
+    for (int i = 0; i < DOOR_COUNT; i++) {
+        bool doorOpen = (doorarray[i] == 1);
+
+        if (doorOpen) {
+            if (!is_door_open[i]) {
+                is_door_open[i] = true;
+                door_open_time[i] = now;
+                alert_sent[i] = false;
+                last_alarm_time[i] = 0;
+            }
+
+            // If door open > timeout
+            if ((now - door_open_time[i]) >= ALERT_TIMEOUT) {
+
+                //  Repeat alarm every 5 sec
+                if ((now - last_alarm_time[i]) >= ALARM_INTERVAL) {
+                    send_door_emergency(i);
+                    last_alarm_time[i] = now;
+                }
+
+                //Send alert/log only once
+                if (!alert_sent[i]) {
+                    //send_sms_alert(doorNames[i]);
+                    //send_email_alert(doorNames[i]);
+                    //log_to_storage(doorNames[i], now);
+                    //report_to_server(doorNames[i], now);
+                    alert_sent[i] = true;
+                }
+            }
+
+        } else {
+            // Door is closed: reset all flags/timers
+            is_door_open[i] = false;
+            door_open_time[i] = 0;
+            last_alarm_time[i] = 0;
+            alert_sent[i] = false;
+        }
+    }
+}
+
+void send_door_emergency( int door) {
+    StaticJsonDocument<253> doc;
+    doc["type"] = "door_emergency";
+
+    char jsonBuffer[256];
+    serializeJson(doc, jsonBuffer, sizeof(jsonBuffer)); 
+    slip_send_message( &slip, (uint8_t *)jsonBuffer, strlen(jsonBuffer)); 
 }
 
 void send_restart_message() {

@@ -29,4 +29,6 @@ void sendLightOff();
 void send_virgin_message();
 void send_device_settings();
 void send_restart_message();
+void send_door_emergency(int i);
+void checkDoorOpen();
 #endif
