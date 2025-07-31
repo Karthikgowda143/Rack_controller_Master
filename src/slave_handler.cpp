@@ -24,9 +24,9 @@ slip_init_handler();
         if(virginmodeflag == false) {
             sendInternalDisplayData();
             checkDoorOpen();
+        } else {
+            send_virgin_message();
         }
-        else
-        send_virgin_message();
     }
     vTaskDelay(pdMS_TO_TICKS(100));
   }
