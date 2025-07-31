@@ -186,20 +186,21 @@ void loadAllSettings() {
   Serial.printf("password        : %d\n", password);
   Serial.printf("Slave virgin    : %d\n", slave_virgin);
   Serial.printf("startStopButton : %d\n", startStopButtonPressed);
+  Serial.printf("System Status   : %d\n", system_status_flag);
 
 
-  if(system_status_flag == false) {
-    if(rackID != 0 && tempThreshold != 0 && smokeThreshold != 0 && slave_virgin == false){
+  if(system_status_flag == false) {  
+    if(rackID != 0 && tempThreshold != 0 && smokeThreshold != 0 && voltageRange != 0 && slave_virgin == false){
       Serial.println("All setup complete");
       saveSystemStatus(true);
-      send_restart_message();
+      send_restart_message(); //for slave restart
       delay(100);
       esp_restart();
     }
   }
   
-  if(system_status_flag == true) virginmodeflag = false;
-  else virginmodeflag = true;
+  if(system_status_flag == true) virginmodeflag = false;  //system_status_flag == true -> running mod
+  else virginmodeflag = true;                             //system_status_flag == false -> virgin mode  
 
 }
 
