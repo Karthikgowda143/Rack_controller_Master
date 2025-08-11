@@ -83,8 +83,17 @@ String getFormattedTime() {
   struct tm* timeinfo = localtime(&now.tv_sec); // Convert to broken-down time
 
   char buffer[30];
-  strftime(buffer, sizeof(buffer), "%d/%m/%Y %I:%M %p", timeinfo);
+  strftime(buffer, sizeof(buffer),"%I:%M %p", timeinfo);
   return String(buffer);  // Return formatted string
 }
 
+String getFormattedDate() {
+  struct timeval now;
+  gettimeofday(&now, NULL); // Read ESP32 internal RTC time
 
+  struct tm* timeinfo = localtime(&now.tv_sec); // Convert to broken-down time
+
+  char buffer[30];
+  strftime(buffer, sizeof(buffer), "%d-%m-%Y",timeinfo);
+  return String(buffer);  // Return formatted date string
+}

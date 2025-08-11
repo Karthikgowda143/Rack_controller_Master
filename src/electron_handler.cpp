@@ -18,6 +18,15 @@ void ElectronAppCommunicationTask(void *pvParameters) {
       sendDataToElectron();
     }
 
+   // unsigned long currentMillis = millis();
+  static unsigned long lastLogTime = 0;
+  if (currentMillis - lastLogTime >= LOG_INTERVAL) {
+    lastLogTime = currentMillis;
+        logData("PERIODIC", "-", "Routine status log"); // Log periodic data every LOG_INTERVAL milliseconds
+  }
+
+
+
     if(Serial2.available()) {
       StaticJsonDocument<512> doc;
       DeserializationError error = deserializeJson(doc, Serial2);

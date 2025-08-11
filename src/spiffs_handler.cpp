@@ -108,8 +108,8 @@ void loadAllSettings() {
     return;
   }
 
-//saveConfigSettings(31,650,2,1,1);
-//saveSlave_virgin(false);
+saveConfigSettings(31,650,2,1,1);
+saveSlave_virgin(false);
 
   // Load config.json
   File file = SPIFFS.open(CONFIG_FILE, FILE_READ);
@@ -174,7 +174,9 @@ void loadAllSettings() {
     file.close();
   }
 
-
+//for testing purposes
+  system_status_flag = true; // Ensure the global variable is set
+  startStopButtonPressed = true; // Ensure the global variable is setS
   // Debug
   Serial.println("Loaded all settings:");
   Serial.printf("tempThreshold   : %d\n", tempThreshold);

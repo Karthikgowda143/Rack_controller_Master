@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "main.h"
 
 void SensorManagementTask(void *pvParameters);
 void ElectronAppCommunicationTask(void *pvParameters);
@@ -45,5 +46,12 @@ void setup() {
 
 void loop() {
   // Main loop can be empty as tasks are running in FreeRTOS
+  // unsigned long currentMillis = millis();
+  // static unsigned long lastLogTime = 0;
+  // if (currentMillis - lastLogTime >= LOG_INTERVAL) {
+  //   lastLogTime = currentMillis;
+  //   logPeriodicData(); // Log periodic data every LOG_INTERVAL milliseconds
+  // }
 
+  vTaskDelay(pdMS_TO_TICKS(1000)); // Delay to prevent watchdog timeout
 }

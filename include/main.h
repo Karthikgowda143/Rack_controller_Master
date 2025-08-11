@@ -14,4 +14,5 @@
 #include "DHT.h"
 #include "ArduinoJson.h"
 #include "spiffs_handler.h"
+#include "local_storage_handler.h"
 #endif

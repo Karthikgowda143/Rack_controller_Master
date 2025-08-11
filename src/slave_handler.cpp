@@ -171,7 +171,7 @@ bool is_door_open[DOOR_COUNT] = {false};
 bool alert_sent[DOOR_COUNT] = {false};
 
 void checkDoorOpen() {
-    const char* doorNames[DOOR_COUNT] = { "front", "back", "side1", "side2" };
+    const char* doorNames[DOOR_COUNT] = { "Front", "Back", "Side1", "Side2" };
     unsigned long now = millis();
 
     for (int i = 0; i < DOOR_COUNT; i++) {
@@ -196,10 +196,12 @@ void checkDoorOpen() {
 
                 //Send alert/log only once
                 if (!alert_sent[i]) {
+                    char buf[32];
+                    snprintf(buf, sizeof(buf), "%s Door open timeout", doorNames[i]);
                     //send_sms_alert(doorNames[i]);
                     //send_email_alert(doorNames[i]);
-                    //log_to_storage(doorNames[i], now);
-                    //report_to_server(doorNames[i], now);
+                    logData("EVENT", "DOOR TIMEOUT", buf);
+            
                     alert_sent[i] = true;
                 }
             }

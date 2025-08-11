@@ -1,4 +1,3 @@
-
 #include "sensor_handler.h"
 
 //Define the DHT11 sensor pin and type
@@ -8,7 +7,7 @@ DHT dht(DHTPIN, DHTTYPE);
 
 bool system_status_flag = false;
 bool virginmodeflag = true;
-bool startStopButtonPressed = false;
+bool startStopButtonPressed = true; //false; for testing
 float temperature = 0.0;
 float humidity = 0.0;
 int smokeValue = 0;
@@ -55,6 +54,7 @@ void SensorManagementTask(void *pvParameters) {
         normalFanOff();
     }
 
+    setupLocalStorage(); // Initialize local storage for logging
 
   while (1) {
     
@@ -100,7 +100,13 @@ void printsensorData() {
     Serial.println("=======================================");
 }
 
-void check_emergency(){
+void check_emergency() {
+    static bool smokeLogged = false;
+    static bool tempLogged = false;
+    static bool lowVoltLogged = false;
+    static bool highVoltLogged = false;
+    char buf[32];
+
     if (smokeValue > smokeThreshold) {
         Serial.println("Emergency! Smoke detected!");
         indicators[3] = 1;
@@ -110,8 +116,16 @@ void check_emergency(){
         char jsonBuffer[256];
         serializeJson(doc, jsonBuffer);
         slip_send_message(&slip, (uint8_t *)jsonBuffer, strlen(jsonBuffer));
+        snprintf(buf, sizeof(buf), "Smoke Limit: %d PPM", smokeThreshold);
+        if (!smokeLogged) {
+            logData("EVENT", "SMOKE_ALERT", buf);
+            smokeLogged = true;
+        }
+    } else {
+        smokeLogged = false;
     }
-    else if (temperature > tempThreshold) {
+
+    if (temperature > tempThreshold) {
         Serial.println("Emergency! High temperature detected!");
         indicators[4] = 1;
         DynamicJsonDocument doc(256);
@@ -120,8 +134,16 @@ void check_emergency(){
         char jsonBuffer[256];
         serializeJson(doc, jsonBuffer);
         slip_send_message(&slip, (uint8_t *)jsonBuffer, strlen(jsonBuffer));
+        snprintf(buf, sizeof(buf), "Temperature Limit: %d °C", tempThreshold);
+        if (!tempLogged) {
+            logData("EVENT", "TEMP_ALERT", buf);
+            tempLogged = true;
+        }
+    } else {
+        tempLogged = false;
     }
-    else if (batteryVoltage < voltageRange_min) {
+
+    if (batteryVoltage < voltageRange_min) {
         Serial.println("Emergency! Battery voltage out of range!");
         DynamicJsonDocument doc(256);
         doc["type"] = "emergency";
@@ -129,8 +151,16 @@ void check_emergency(){
         char jsonBuffer[256];
         serializeJson(doc, jsonBuffer);
         slip_send_message(&slip, (uint8_t *)jsonBuffer, strlen(jsonBuffer));
+        snprintf(buf, sizeof(buf), "Voltage range:[%d-%d] V", voltageRange_min, voltageRange_max);
+        if (!lowVoltLogged) {
+            logData("EVENT", "LOW_VOLTAGE", buf);
+            lowVoltLogged = true;
+        }
+    } else {
+        lowVoltLogged = false;
     }
-    else if (batteryVoltage > voltageRange_max) {
+
+    if (batteryVoltage > voltageRange_max) {
         Serial.println("Emergency! Battery voltage too high!");
         DynamicJsonDocument doc(256);
         doc["type"] = "emergency";
@@ -138,8 +168,17 @@ void check_emergency(){
         char jsonBuffer[256];
         serializeJson(doc, jsonBuffer);
         slip_send_message(&slip, (uint8_t *)jsonBuffer, strlen(jsonBuffer));
+        snprintf(buf, sizeof(buf), "Voltage range:[%d-%d] V", voltageRange_min, voltageRange_max);
+        if (!highVoltLogged) {
+            logData("EVENT", "HIGH_VOLTAGE", buf);
+            highVoltLogged = true;
+        }
+    } else {
+        highVoltLogged = false;
     }
-    else {
+
+    if (!(smokeValue > smokeThreshold) && !(temperature > tempThreshold) &&
+        !(batteryVoltage < voltageRange_min) && !(batteryVoltage > voltageRange_max)) {
         Serial.println("No emergency");
         indicators[3] = 0;
         indicators[4] = 0;
