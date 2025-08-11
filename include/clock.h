@@ -17,5 +17,6 @@ void _rtc_SyncESPInternalRTC(void);
 struct tm getInternalRTC(void);
 time_t getEpochTime(void);
 String getFormattedTime();
+String getFormattedDate();
 
 #endif
