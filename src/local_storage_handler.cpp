@@ -19,6 +19,9 @@ void setupLocalStorage() {
     } else {
         Serial.println("Log folder already exists.");
     }
+
+    // Delete files older than 30 days in /logs
+    deleteOldLogs();
 }
 
 // Write log entry to today's file with headers if needed
@@ -36,7 +39,7 @@ void writeLog(String entry) {
 
   // Write column headers if file is new
   if (newFile) {
-    file.println("Timestamp,Rack ID,Log Type,Event Type,Volt (V),Temp (C),Humidity(%),Smoke (PPM),"
+    file.println("Time,Rack ID,Log Type,Event Type,Volt (V),Temp (C),Humidity(%),Smoke (PPM),"
                  "Fan1,Fan2,Fan3,Fan4,Fan5,Fan6,Fan7,Fan8,"
                  "Door1,Door2,Door3,Door4,Description");
   }
@@ -47,24 +50,6 @@ void writeLog(String entry) {
 
   Serial.println("Logged: " + entry);
 }
-
-// void logPeriodicData() {
-//   String nor_fan[4];
-//   String stand_fan[4];
-//   String door[4];
-//   for(int i=0; i < 4; i++) {
-//     (normal_fanarray[i] == 1) ? nor_fan[i] = "ON" : nor_fan[i] = "OFF";
-//     (standby_fanarray[i] == 1) ? stand_fan[i] = "ON" : stand_fan[i] = "OFF";
-//     (doorarray[i] == 1) ? door[i] = "Open" : door[i] = "Closed";
-//   }
-//     String entry = getFormattedDate(); + "," + String(rackID) + "," + "PERIODIC" + "," + "-" + "," +
-//                    String(batteryVoltage) + "," + String(temperature) + "," + String(humidity) + "," + String(smokeValue) + "," +
-//                    nor_fan[0]+ "," + nor_fan[1] + "," + nor_fan[2] + "," + nor_fan[3] + "," +
-//                    stand_fan[0] + "," + stand_fan[1] + "," + stand_fan[2] + "," + stand_fan[3] + "," +
-//                    door[0] + "," + door[1] + "," + door[2] + "," + door[3] + "," +
-//                    "Periodic Data";
-//     writeLog(entry);
-// }
 
 void logData(String logType, String eventType, String description) {
     // Arrays for fan and door states
@@ -92,7 +77,7 @@ void logData(String logType, String eventType, String description) {
         nor_fan[0], nor_fan[1], nor_fan[2], nor_fan[3],
         stand_fan[0], stand_fan[1], stand_fan[2], stand_fan[3],
         door[0], door[1], door[2], door[3],
-        description
+        description 
     };
 
     // Join fields with commas
@@ -103,4 +88,59 @@ void logData(String logType, String eventType, String description) {
     }
 
     writeLog(entry);
+}
+
+// Convert "YYYY-MM-DD" → time_t
+time_t dateStringToTime(const char* dateStr) {
+    struct tm t = {};
+    sscanf(dateStr, "%4d-%2d-%2d", &t.tm_year, &t.tm_mon, &t.tm_mday);
+    t.tm_year -= 1900;  // struct tm years since 1900
+    t.tm_mon  -= 1;     // struct tm months are 0-11
+    return mktime(&t);
+}
+
+// Delete log files older than MAX_LOG_DAYS
+void deleteOldLogs() {
+    File dir = SD.open(LOG_FOLDER);
+    if (!dir) {
+        Serial.println("Failed to open log folder");
+        return;
+    }
+
+    time_t now;
+    struct timeval tv;
+    gettimeofday(&tv, NULL); 
+    now = tv.tv_sec;
+
+    while (true) {
+        File file = dir.openNextFile();
+        if (!file) break; // No more files
+
+        String fileName = file.name();
+        file.close();
+        Serial.printf("Checking file: %s\n", fileName.c_str());
+        // Expecting format: DD-MM-YYYY.csv
+        if (fileName.length() >= 14 && fileName.endsWith(".csv")) {
+            String datePart = fileName.substring(0, 10); // Extract DD-MM-YYYY
+            // Convert DD-MM-YYYY to YYYY-MM-DD for dateStringToTime
+            String day   = datePart.substring(0, 2);
+            String month = datePart.substring(3, 5);
+            String year  = datePart.substring(6, 10);
+            String isoDate = year + "-" + month + "-" + day;
+            time_t fileTime = dateStringToTime(isoDate.c_str());
+
+            Serial.printf("File date: %s, time_t: %ld\n", isoDate.c_str(), fileTime);
+            double daysOld = difftime(now, fileTime) / (60 * 60 * 24);
+            Serial.printf("Days old: %.0f\n", daysOld);
+            if (daysOld > MAX_LOG_DAYS) {
+                String fullPath = String(LOG_FOLDER) + "/" + fileName;
+                if (SD.remove(fullPath)) {
+                    Serial.printf("Deleted old log: %s (%.0f days old)\n", fullPath.c_str(), daysOld);
+                } else {
+                    Serial.printf("Failed to delete: %s\n", fullPath.c_str());
+                }
+            }
+        }
+    }
+    dir.close();
 }

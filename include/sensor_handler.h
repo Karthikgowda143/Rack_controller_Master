@@ -6,6 +6,7 @@
 #include "DHT.h"
 #include "clock.h"
 #include "math.h"
+#include <SparkFunTMP102.h>
 
 bool extern system_status_flag;
 bool extern virginmodeflag;
@@ -53,6 +54,7 @@ extern int voltageRange_min;
 extern int voltageRange_max;
 
 void SensorManagementTask(void *pvParameters);
+void temp_sensor_Init();
 void read_DHT11();
 void read_smoke();
 void readBatteryVoltage();

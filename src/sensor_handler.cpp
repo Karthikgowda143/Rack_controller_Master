@@ -46,6 +46,7 @@ void SensorManagementTask(void *pvParameters) {
     Time t = rtc_GetTime();
     Serial.printf("System time: %04d-%02d-%02d %02d:%02d:%02d\n\n", t.year + 2000, t.month, t.day, t.hour, t.minute, t.second);
     
+    temp_sensor_Init();
     dht.begin();  
 
     if(virginmodeflag == false && startStopButtonPressed == true) {
@@ -191,9 +192,44 @@ void check_emergency() {
     }
 }
 
+
+#define TMP102_ADDR 0x48
+TMP102 sensor;
+
+int retryCount = 0;
+const int maxRetries = 4;
+
+void temp_sensor_Init(){
+
+    Wire.begin();
+    while (!sensor.begin()) {
+        Serial.println("Error: TMP102 not detected. Check connections!");
+        // while (1);
+        retryCount++;
+        if (retryCount >= maxRetries) {
+            Serial.println("Failed to initialize TMP102 after multiple attempts. Check connections!");
+            break; // Exit the loop after max retries
+        }
+        delay(1000); // Wait before retrying
+    }
+
+    if (retryCount < maxRetries){
+    // Configure sensor settings
+    sensor.setFault(0);                // Trigger alarm immediately on fault
+    sensor.setAlertPolarity(1);        // Actives HIGH alert - The ALERT pin will go HIGH (3.3V) when the alert condition is triggered.
+    sensor.setAlertMode(0);            // Comparator Mode - The ALERT pin remains active as long as the temperature is above the T_HIGH threshold or below the T_LOW threshold.
+    sensor.setConversionRate(2);       // Conversion rate: 4Hz
+    sensor.setExtendedMode(0);         // Standard temperature range
+   // sensor.setHighTempC(HIGHER_LIMIT);         // Upper limit in Celsius
+    sensor.setLowTempC(0.0);          // Lower limit in Celsius
+    }
+}
+
+
 void read_DHT11() {
     humidity = dht.readHumidity();
-    temperature = dht.readTemperature();// Celsius
+   // temperature = dht.readTemperature();// Celsius
+    temperature = sensor.readTempC();
 
     if (isnan(humidity) || isnan(temperature)) {
         Serial.println("Failed to read from DHT sensor!");

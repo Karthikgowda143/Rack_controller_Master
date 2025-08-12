@@ -20,5 +20,6 @@
 void setupLocalStorage();
 void writeLog(String entry);
 void logData(String logType, String eventType, String description);
-
+time_t dateStringToTime(const char* dateStr);
+void deleteOldLogs();
 #endif // LOCAL_STORAGE_HANDLER_H
