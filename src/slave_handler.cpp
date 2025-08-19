@@ -6,6 +6,7 @@
 
 uint8_t buf[500];
 
+int registeredUserIDs[4] = {0};
 unsigned long previousMillis2 = 0;
 
 void SlaveCommunicationTask(void *pvParameters) {
@@ -21,9 +22,12 @@ slip_init_handler();
     if (currentMillis - previousMillis2 >= 5000) {  // Check every 5 seconds
         previousMillis2 = currentMillis;
 
-        if(virginmodeflag == false) {
+        if(factorymode == false && virginmodeflag == false) {
             sendInternalDisplayData();
             checkDoorOpen();
+            if(registeredUserIDs[0] == 0){
+                //askuserIDs();
+            }
         } else {
             send_virgin_message();
         }
@@ -105,10 +109,26 @@ void recv_message(uint8_t *data, uint32_t size)
             sendDoorAndLightOpen();
         }
     }
-    else if (type == "scan") {
-        const char* userID = doc["userID"];
-        
-        sendDoorAndLightOpen(); 
+    else if (type == "user_ids") {
+        JsonArray userIDs = doc["userIDs"].as<JsonArray>();
+        int index = 0;
+        for (JsonVariant value : userIDs) {
+            if (index < 4) {
+                registeredUserIDs[index++] = value.as<int>();
+            }
+        }
+    }
+    else if (type == "door_access_request") {
+        //askuserIDs();
+    }
+    else if (type == "door_access") {
+        int userID = doc["userID"];
+        const char* authenticate_type = doc["authenticate_type"];
+
+        char buff[32];
+        snprintf(buff, sizeof(buff), "User ID: %d, Type: %s", userID, authenticate_type);
+        logData("EVENT", "DOOR_ACCESS", buff);
+
     }
     else if (type == "rack_id_set") {
         int rackIDReceived = doc["rack_id"];
@@ -128,20 +148,20 @@ void recv_message(uint8_t *data, uint32_t size)
         delay(50);
         loadAllSettings();
         set_voltage_range();  
-        if(four_g_enable == 1){
-            StaticJsonDocument<256> doc;
-            doc["type"] = "4g_status";
-            doc["status"] = "ON";
-            serializeJson(doc, Serial0);
-            Serial0.println();
-        }
-        else{
-            StaticJsonDocument<256> doc;
-            doc["type"] = "4g_status";
-            doc["status"] = "OFF";
-            serializeJson(doc, Serial0);
-            Serial0.println();
-        }
+        // if(four_g_enable == 1){
+        //     StaticJsonDocument<256> doc;
+        //     doc["type"] = "4g_status";
+        //     doc["status"] = "ON";
+        //     serializeJson(doc, Serial0);
+        //     Serial0.println();
+        // }
+        // else{
+        //     StaticJsonDocument<256> doc;
+        //     doc["type"] = "4g_status";
+        //     doc["status"] = "OFF";
+        //     serializeJson(doc, Serial0);
+        //     Serial0.println();
+        // }
         
     }
     else if (type == "rtc_set") {
@@ -159,6 +179,15 @@ void recv_message(uint8_t *data, uint32_t size)
     {
         send_device_settings();
     }
+}
+
+void askuserIDs() {
+    StaticJsonDocument<256> doc;
+    doc["type"] = "ask_user_ids";
+
+    char jsonBuffer[256];
+    serializeJson(doc, jsonBuffer, sizeof(jsonBuffer)); 
+    slip_send_message( &slip, (uint8_t *)jsonBuffer, strlen(jsonBuffer)); 
 }
 
 #define DOOR_COUNT 4

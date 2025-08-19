@@ -7,6 +7,19 @@
 #define PASSWORD_FILE  "/password.json"
 #define SLAVE_VIRGIN "/slave_virgin.json"
 #define BUTTON_STATUS "/button_status.json"
+#define MOBILE_NUMBERS_FILE "/mobile_numbers.json"
+#define EMAIL_IDS_FILE "/email_ids.json"
+
+const char* mobileNumbers[] = {0};
+const char* emailIDs[] = {0};
+
+void spiffs_init() {
+  if (!SPIFFS.begin(true)) {
+    Serial.println("SPIFFS mount failed.");
+    return;
+  }
+  Serial.println("SPIFFS initialized");
+}
 
 void saveConfigSettings(int tempThreshold, int smokeThreshold, int voltageRange, int humidity_enable, int four_g_enable) {
   DynamicJsonDocument doc(256);
@@ -101,6 +114,97 @@ void saveButtonStatus( bool startStopButtonPressed) {
   file.close();
 }
    
+void saveMobileNumbers(const char* mobileNumbers[], size_t count) {
+  DynamicJsonDocument doc(1024);
+  JsonArray array = doc.to<JsonArray>();
+
+  for (size_t i = 0; i < count; ++i) {
+    array.add(mobileNumbers[i]);
+  }
+
+  File file = SPIFFS.open(MOBILE_NUMBERS_FILE, FILE_WRITE);
+  if (!file) {
+    Serial.println("Failed to open mobile numbers file");
+    return;
+  }
+
+  serializeJson(doc, file);
+  file.close();
+}
+
+void saveEmailIDs(const char* emailIDs[], size_t count) {
+  DynamicJsonDocument doc(1024);
+  JsonArray array = doc.to<JsonArray>();
+
+  for (size_t i = 0; i < count; ++i) {
+    array.add(emailIDs[i]);
+  }
+
+  File file = SPIFFS.open(EMAIL_IDS_FILE, FILE_WRITE);
+  if (!file) {
+    Serial.println("Failed to open email IDs file");
+    return;
+  }
+
+  serializeJson(doc, file);
+  file.close();
+}
+
+void loadMobileNumbers() {
+  File file = SPIFFS.open(MOBILE_NUMBERS_FILE, FILE_READ);
+  if (!file) {
+    Serial.println("Failed to open mobile numbers file");
+    return;
+  }
+
+  DynamicJsonDocument doc(1024);
+  if (deserializeJson(doc, file) == DeserializationError::Ok) {
+    JsonArray array = doc.as<JsonArray>();
+    size_t count = array.size();
+    for (size_t i = 0; i < count; ++i) {
+      mobileNumbers[i] = array[i].as<const char*>();
+    }
+  }
+  file.close();
+}
+
+void loadEmailIDs() {
+  File file = SPIFFS.open(EMAIL_IDS_FILE, FILE_READ);
+  if (!file) {
+    Serial.println("Failed to open email IDs file");
+    return;
+  }
+
+  DynamicJsonDocument doc(1024);
+  if (deserializeJson(doc, file) == DeserializationError::Ok) {
+    JsonArray array = doc.as<JsonArray>();
+    size_t count = array.size();
+    for (size_t i = 0; i < count; ++i) {
+      emailIDs[i] = array[i].as<const char*>();
+    }
+  }
+  file.close();
+}
+
+int loadRackID() {
+  saveRackID(5); //for testing purposes
+
+  File file = SPIFFS.open(RACK_FILE, FILE_READ);
+  if (!file) {
+    Serial.println("Failed to open rackid file");
+    return 0;
+  }
+
+  //saveRackID(5); //for testing purposes
+
+  DynamicJsonDocument doc(32);
+  if (deserializeJson(doc, file) == DeserializationError::Ok) {
+    rackID = doc["rackID"];
+  }
+  file.close();
+  Serial.printf("Loaded rack ID: %d\n", rackID);
+  return rackID;
+}
 
 void loadAllSettings() {
   if (!SPIFFS.begin(true)) {
@@ -125,15 +229,15 @@ saveSlave_virgin(false);
     file.close();
   }
 
-  // Load rackid.json
-  file = SPIFFS.open(RACK_FILE, FILE_READ);
-  if (file) {
-    DynamicJsonDocument doc(64);
-    if (deserializeJson(doc, file) == DeserializationError::Ok) {
-      rackID = doc["rackID"];
-    }
-    file.close();
-  }
+  // // Load rackid.json
+  // file = SPIFFS.open(RACK_FILE, FILE_READ);
+  // if (file) {
+  //   DynamicJsonDocument doc(64);
+  //   if (deserializeJson(doc, file) == DeserializationError::Ok) {
+  //     rackID = doc["rackID"];
+  //   }
+  //   file.close();
+  // }
 
   // Load password.json
   file = SPIFFS.open(PASSWORD_FILE, FILE_READ);
@@ -197,7 +301,7 @@ saveSlave_virgin(false);
       saveSystemStatus(true);
       send_restart_message(); //for slave restart
       delay(100);
-      esp_restart();
+      //esp_restart();
     }
   }
   

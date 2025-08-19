@@ -5,6 +5,7 @@
 #define DHTTYPE DHT11   // Sensor type: DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
+bool factorymode = true; // true for factory mode, false for normal operation
 bool system_status_flag = false;
 bool virginmodeflag = true;
 bool startStopButtonPressed = true; //false; for testing
@@ -29,12 +30,13 @@ int voltageRange_max = 0;
 int rackID = 00;  
 int password = 0000;  
 unsigned long lastMillis = 0;
+bool sdMounted = false;
 
 void SensorManagementTask(void *pvParameters) {
 
     delay(500);
-    loadAllSettings();
-    set_voltage_range();
+    //loadAllSettings();
+    //set_voltage_range();
 
     gpio_Init();
 
@@ -49,23 +51,53 @@ void SensorManagementTask(void *pvParameters) {
     temp_sensor_Init();
     dht.begin();  
 
-    if(virginmodeflag == false && startStopButtonPressed == true) {
+    spiffs_init();
+
+    loadAllSettings();
+    rackID = loadRackID();
+    if (rackID == 0) {
+        Serial.println("Rack ID not set. Please set it in the configuration.");
+    } else {
+        Serial.printf("Rack ID: %d\n", rackID);
+        factorymode = false; // Exit factory mode if rack ID is set
+    }
+
+    // Initialize local storage after rackID is known, so folder path uses correct rack
+    setupLocalStorage();
+
+    initLogger();
+
+    if(factorymode == false && virginmodeflag == false && startStopButtonPressed == true) {
         normalFanOn();
     } else {
         normalFanOff();
     }
 
-    setupLocalStorage(); // Initialize local storage for logging
 
   while (1) {
+    unsigned long currentMillis = millis();
+    // Always check SD card presence each loop
+    //checkSDCard();
+
+    static unsigned long lastLogTime = 0;
+    if (currentMillis - lastLogTime >= LOG_INTERVAL) {
+        lastLogTime = currentMillis;
+        logData("PERIODIC", "-", "Routine status log"); // Log periodic data every LOG_INTERVAL milliseconds
+  }
+
+    static unsigned long lastLogTime2 = 0;
+    if (currentMillis - lastLogTime2 >= 4000) {
+        lastLogTime2 = currentMillis;
+        
     
-    if(virginmodeflag == false && startStopButtonPressed == true) {
+
+    if(factorymode == false && virginmodeflag == false && startStopButtonPressed == true) {
         read_DHT11();  
         read_smoke();  
         readBatteryVoltage();   
         printsensorData(); 
-    
-        unsigned long currentMillis = millis();
+        checkSDCard();
+        
         if (currentMillis - lastMillis >= 15000) {
             lastMillis = currentMillis;
             check_emergency();
@@ -77,7 +109,8 @@ void SensorManagementTask(void *pvParameters) {
         smokeValue = 0;
         batteryVoltage = 0;
     }
-    vTaskDelay(pdMS_TO_TICKS(3000)); 
+    }
+    vTaskDelay(pdMS_TO_TICKS(500)); 
   }
 }
 

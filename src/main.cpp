@@ -9,6 +9,11 @@ void setup() {
   Serial.begin(115200);
   Serial.println("ESP32-S3 USB Serial port started");
 
+  // Stabilize SD CS line early to avoid spurious selects during boot
+  pinMode(SD_CS, OUTPUT);
+  digitalWrite(SD_CS, HIGH);
+  delay(300);
+
   // Create Sensor Management Thread
   xTaskCreatePinnedToCore(
     SensorManagementTask,    // Task function
@@ -39,7 +44,7 @@ void setup() {
     NULL,
     1,
     NULL,
-    0 // Run on Core 0 (to balance load)
+    1 // Run on Core 1 (to balance load)
   );
 
 }

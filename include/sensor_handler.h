@@ -7,7 +7,10 @@
 #include "clock.h"
 #include "math.h"
 #include <SparkFunTMP102.h>
+#include "local_storage_handler.h"
 
+extern bool sdMounted;
+bool extern factorymode; 
 bool extern system_status_flag;
 bool extern virginmodeflag;
 bool extern startStopButtonPressed;
@@ -52,6 +55,7 @@ extern int humidity_enable;
 extern int four_g_enable;
 extern int voltageRange_min;
 extern int voltageRange_max;
+extern bool sdMounted;
 
 void SensorManagementTask(void *pvParameters);
 void temp_sensor_Init();

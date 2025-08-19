@@ -4,7 +4,7 @@
 #include "slip.h"
 #include "main.h"
 
-
+extern int registeredUserIDs[4];
 // Declare buffer and slip handler
 extern uint8_t buf[500];  // External buffer
 extern slip_descriptor_s slip_descriptor;

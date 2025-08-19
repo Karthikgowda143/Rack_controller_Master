@@ -5,5 +5,7 @@
 
 void ElectronAppCommunicationTask(void *pvParameters);
 void sendDataToElectron();
+void readElectronData();
+
 
 #endif
